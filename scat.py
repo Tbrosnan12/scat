@@ -2,6 +2,8 @@ import folium
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import branca.colormap as cm
+import math
 
 dir="/home/thomas/Downloads/hackathon_2025/scat/"
 
@@ -41,9 +43,9 @@ def std(x):
 
 
 # Long Mile Road
-long_mile_id=767
+long_mile_id=379
 
-
+long_mile_good_id=0
 # FIX DATA
 N=len(ids)
 good_ids=[]
@@ -54,10 +56,10 @@ for j in range(N):
             print("")  
         else: 
             good_ids.append(ids[j])
-        if j==long_mile_id:         # < ------  random bad data point 
+        if j==long_mile_id:         
            long_mile_good_id=len(good_ids)
 
-
+print(long_mile_good_id)
 N=len(good_ids)
 ref=np.array(Data.loc[Data["Site"] == 2, "End_Time"].tolist())
 times=np.zeros(shape=(N,len(ref)))
@@ -79,11 +81,8 @@ for j in range(N):
                     volume.insert(i,volume[i+1])
                 else:
                     volume.insert(i,(volume[i-1]+volume[i+1])/2)
-    if j==341:
-        print("here")
-    else: 
-        times[j,:]=np.array(row)
-        volumes[j,:]=np.array(volume)
+    times[j,:]=np.array(row)
+    volumes[j,:]=np.array(volume)
     
     
 
@@ -124,22 +123,28 @@ m = folium.Map(
 )
 
 
+# Define start and end colors (RGB)
+start_color = 0  # blue
+end_color   = 255  # not blue
 
+def value_to_rgb(val):
+    """Linearly interpolate between start_color and end_color"""
+    if math.isnan(val):
+        return "rgb(0,0,0)"  # gray for missing values
+    rgb = (1 - val) * start_color + val * end_color
+    return f"rgb({int(0)},{int(0)},{int(rgb)})"
 
-
-# Add some major intersections as markers
-for i in range(len(lats)):
-    rad=1
-    for j in range(len(one_am_sites)):
-         if data_sites[i]==one_am_sites[j]:
-            rad=one_am_volumes[j]/100
-            if rad<1:
-                rad=1
+# ADD SITE MARKERS
+for i in range(len(good_ids)):
+    color = value_to_rgb(C[long_mile_good_id,i])
+    for j in range(len(ids)):
+        if good_ids[i]==ids[j]:
+            id_index=j
     folium.CircleMarker(
-        location=[lats[i], longs[i]],
-        radius=rad,
-        popup=f"SiteId: {ids[i]})",
-        color='red',
+        location=[lats[id_index], longs[id_index]],
+        radius=4,
+        popup=f"SiteId: {ids[id_index]})",
+        color=color,
         fillOpacity=0.8).add_to(m) 
 
 
