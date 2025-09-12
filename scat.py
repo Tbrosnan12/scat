@@ -45,12 +45,13 @@ def std(x):
 # Long Mile Road
 #long_mile_id=379
 
-long_mile_good_id=219
+long_mile_good_id=46
 # FIX DATA
 
 
 N=len(ids)
 good_ids=[]
+id_list=[]
 for j in range(N):
     row=Data.loc[Data["Site"] == ids[j], "End_Time"].tolist()
     volume=Data.loc[Data["Site"] == ids[j], "Sum_Volume"].tolist()
@@ -61,6 +62,7 @@ for j in range(N):
         #    print("")  
         #else: 
         good_ids.append(ids[j])
+        id_list.append(j)
         #if j==long_mile_id:         
          #   long_mile_good_id=len(good_ids)
 
@@ -88,47 +90,6 @@ for j in range(N):
     times[j,:]=np.array(row)
     volumes[j,:]=np.array(volume)
     
-    
-
-
-#CORRELATION MATRIX              
-count=0
-C = np.zeros(shape=(N, N))
-for i in range(len(good_ids)):
-    volumes_1 = volumes[i, :]
-    std1 = np.std(volumes_1)
-    for j in range(i, len(good_ids)):
-        volumes_2 = volumes[j, :]
-        std2 = np.std(volumes_2)
-
-        denom = std1 * std2
-        if denom == 0:
-            print(volumes_2)
-            count+=1
-            C[i, j] = 0.0
-        else:
-            C[i, j] = Cov(volumes_1, volumes_2) / denom
-
-print(count)
-
-box_width=1/100
-boxs= np.arange(box_width/2-1,1+box_width/2,box_width)
-freq=np.zeros(len(boxs))
-
-for i in range(len(C)):
-    for j in range(i, len(C)):
-        for index,box_val in enumerate(boxs):
-            if (box_val-box_width/2)<=C[i,j]<(box_val+box_width/2):
-                freq[index]+=1
-plt.figure()
-plt.bar(boxs,freq,width=box_width)
-#plt.plot(boxs,freq,'o',markersize='0.1')
-plt.show()
-
-
-# DISTANCE MATRIX
-D=np.sqrt(0.5*(1-C))
-
 
 
 #DISTANCE FORMULA
@@ -161,12 +122,69 @@ def distance(lat1, lon1, lat2, lon2):
 
     return R * c
 
+                         
+# PHYSICAL DISTANCE MATRIX
+Distance = np.zeros(shape=(N, N))
 
+
+
+#CORRELATION MATRIX              
+C = np.zeros(shape=(N, N))
+for i in range(len(good_ids)):
+    volumes_1 = volumes[i, :]
+    std1 = np.std(volumes_1)
+    for j in range(i, len(good_ids)):
+        if good_ids[i]==ids[j]:
+                    Distance[i,j]=distance(lats[id_list[i]],longs[id_list[i]],lats[id_list[j]],longs[id_list[j]])
+        volumes_2 = volumes[j, :]
+        std2 = np.std(volumes_2)
+
+        denom = std1 * std2
+        if denom == 0:
+            print(volumes_2)
+            count+=1
+            C[i, j] = 0.0
+        else:
+            C[i, j] = Cov(volumes_1, volumes_2) / denom
+
+
+# DISTANCE MATRIX
+D=np.sqrt(0.5*(1-C))
+
+# PHYSICAL DISTANCE MATRIX
+Distance=Distance/Distance.max()
+
+box_width=1/100
+boxs= np.arange(box_width/2-1,1+box_width/2,box_width)
+freq=np.zeros(len(boxs))
+dist_freq=np.zeros(len(boxs))
+
+for i in range(len(C)):
+    for j in range(i, len(C)):
+        for index,box_val in enumerate(boxs):
+            if (box_val-box_width/2)<=C[i,j]<(box_val+box_width/2):
+                freq[index]+=1
+            if (box_val-box_width/2)<=D[i,j]/Distance[i,j]<(box_val+box_width/2):
+                dist_freq[index]+=1
+plt.figure()
+plt.bar(boxs,freq,width=box_width)
+#plt.plot(boxs,freq,'o',markersize='0.1')
+plt.figure()
+plt.bar(boxs,dist_freq,width=box_width)
+#plt.plot(boxs,freq,'o',markersize='0.1')
+plt.show()
+
+
+
+
+
+
+        
 
 
 
 # COLOURS
-start_color = 100  # less blue
+start_color = 0  # less blue
 end_color   = 255  # blue
 
 def value_to_rgb(val, gamma=4.0):
